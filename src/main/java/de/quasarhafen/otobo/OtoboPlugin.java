@@ -1,5 +1,6 @@
 package de.quasarhafen.otobo;
 
+import de.quasarhafen.otobo.command.SupportCommand;
 import org.bukkit.plugin.java.JavaPlugin;
 
 public class OtoboPlugin extends JavaPlugin {
@@ -9,9 +10,15 @@ public class OtoboPlugin extends JavaPlugin {
     @Override
     public void onEnable() {
         saveDefaultConfig();
+
+        // Service initialisieren
         service = new OtoboService(this);
-        getCommand("support").setExecutor(new SupportCommand(this, service));
-        getCommand("support").setTabCompleter(new SupportCommand(this, service));
+
+        // Command registrieren
+        SupportCommand command = new SupportCommand(this);
+        getCommand("support").setExecutor(command);
+        getCommand("support").setTabCompleter(command);
+
         getLogger().info("OtoboPlugin aktiviert.");
     }
 

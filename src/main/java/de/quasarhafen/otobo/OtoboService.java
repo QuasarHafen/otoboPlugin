@@ -1,21 +1,22 @@
 package de.quasarhafen.otobo;
 
-import org.bukkit.Bukkit;
 import org.bukkit.configuration.file.FileConfiguration;
 import org.bukkit.entity.Player;
 
-import java.io.*;
+import java.io.BufferedReader;
+import java.io.InputStreamReader;
 import java.net.HttpURLConnection;
+import java.net.URI;
 import java.net.URL;
 import java.nio.charset.StandardCharsets;
 import java.util.UUID;
 
 public class OtoboService {
 
-    private final OtoboSupport plugin;
+    private final OtoboPlugin plugin;
     private String sessionID;
 
-    public OtoboService(OtoboSupport plugin) {
+    public OtoboService(OtoboPlugin plugin) {
         this.plugin = plugin;
         createSession();
     }
@@ -23,7 +24,7 @@ public class OtoboService {
     public void createSession() {
         try {
             FileConfiguration cfg = plugin.getConfig();
-            URL url = new URL(cfg.getString("otobo.base-url") + "/SessionCreate");
+            URL url = URI.create(cfg.getString("otobo.base-url") + "/SessionCreate").toURL();
 
             HttpURLConnection conn = (HttpURLConnection) url.openConnection();
             conn.setRequestMethod("POST");
@@ -51,13 +52,14 @@ public class OtoboService {
             plugin.getLogger().info("OTOBO Session erstellt.");
         } catch (Exception e) {
             plugin.getLogger().warning("Session fehlgeschlagen!");
+            e.printStackTrace();
         }
     }
 
     public String createTicket(Player player, String message) {
         try {
             FileConfiguration cfg = plugin.getConfig();
-            URL url = new URL(cfg.getString("otobo.base-url") + "/TicketCreate");
+            URL url = URI.create(cfg.getString("otobo.base-url") + "/TicketCreate").toURL();
 
             UUID uuid = player.getUniqueId();
             String customerUser = uuid.toString();
@@ -78,10 +80,13 @@ public class OtoboService {
                 "ContentType": "text/plain; charset=utf-8"
               }
             }
-            """.formatted(sessionID, player.getName(),
+            """.formatted(
+                    sessionID,
+                    player.getName(),
                     cfg.getString("queue"),
                     customerUser,
-                    message);
+                    message.replace("\"", "'")
+            );
 
             HttpURLConnection conn = (HttpURLConnection) url.openConnection();
             conn.setRequestMethod("POST");
@@ -95,12 +100,13 @@ public class OtoboService {
 
             String response = br.readLine();
 
-            if (response.contains("TicketNumber")) {
+            if (response != null && response.contains("TicketNumber")) {
                 return response.split("\"")[3];
             }
 
         } catch (Exception e) {
             plugin.getLogger().warning("Ticket Fehler.");
+            e.printStackTrace();
         }
         return null;
     }
