@@ -1,5 +1,5 @@
 name: OtoboPlugin
-version: 1.0
+version: 1.1
 main: de.quasarhafen.otobo.OtoboPlugin
 api-version: 1.21
 

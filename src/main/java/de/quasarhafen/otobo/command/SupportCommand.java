@@ -1,9 +1,11 @@
 package de.quasarhafen.otobo.command;
 
 import de.quasarhafen.otobo.OtoboPlugin;
-import org.bukkit.Bukkit;
 import org.bukkit.ChatColor;
-import org.bukkit.command.*;
+import org.bukkit.command.Command;
+import org.bukkit.command.CommandExecutor;
+import org.bukkit.command.CommandSender;
+import org.bukkit.command.TabCompleter;
 import org.bukkit.entity.Player;
 
 import java.util.Collections;
@@ -24,7 +26,9 @@ public class SupportCommand implements CommandExecutor, TabCompleter {
     @Override
     public boolean onCommand(CommandSender sender, Command cmd, String label, String[] args) {
 
-        if (!(sender instanceof Player player)) return true;
+        if (!(sender instanceof Player player)) {
+            return true;
+        }
 
         if (args.length == 0) {
             player.sendMessage(color("&cNutze: /support <nachricht>"));
@@ -33,25 +37,9 @@ public class SupportCommand implements CommandExecutor, TabCompleter {
 
         String message = String.join(" ", args);
 
-        player.sendMessage(color("&8[&bSupport&8] &7Ticket wird erstellt..."));
+        player.sendMessage(color("&eTicket wird erstellt..."));
 
-        Bukkit.getScheduler().runTaskAsynchronously(plugin, () -> {
-            String ticket = plugin.getService().createTicket(player, message);
-
-            if (ticket != null) {
-                player.sendMessage(color("&8[&bSupport&8] &aTicket erstellt: &e#" + ticket));
-
-                // Admin Notify
-                for (Player p : Bukkit.getOnlinePlayers()) {
-                    if (p.hasPermission("otobo.admin")) {
-                        p.sendMessage(color("&8[&bSupport&8] &e"
-                                + player.getName() + " hat ein Ticket erstellt (#" + ticket + ")"));
-                    }
-                }
-            } else {
-                player.sendMessage(color("&8[&bSupport&8] &cFehler beim Erstellen des Tickets."));
-            }
-        });
+        plugin.getService().createTicket(player, message);
 
         return true;
     }

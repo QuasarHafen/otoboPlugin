@@ -1,113 +1,165 @@
 package de.quasarhafen.otobo;
 
+import org.bukkit.Bukkit;
 import org.bukkit.configuration.file.FileConfiguration;
 import org.bukkit.entity.Player;
 
-import java.io.BufferedReader;
-import java.io.InputStreamReader;
-import java.net.HttpURLConnection;
 import java.net.URI;
-import java.net.URL;
+import java.net.http.HttpClient;
+import java.net.http.HttpRequest;
+import java.net.http.HttpResponse;
 import java.nio.charset.StandardCharsets;
-import java.util.UUID;
+import java.time.Duration;
 
 public class OtoboService {
 
     private final OtoboPlugin plugin;
+    private final HttpClient client;
     private String sessionID;
 
     public OtoboService(OtoboPlugin plugin) {
         this.plugin = plugin;
+
+        this.client = HttpClient.newBuilder()
+                .connectTimeout(Duration.ofSeconds(5))
+                .build();
+
         createSession();
     }
 
     public void createSession() {
-        try {
-            FileConfiguration cfg = plugin.getConfig();
-            URL url = URI.create(cfg.getString("otobo.base-url") + "/SessionCreate").toURL();
 
-            HttpURLConnection conn = (HttpURLConnection) url.openConnection();
-            conn.setRequestMethod("POST");
-            conn.setDoOutput(true);
-            conn.setRequestProperty("Content-Type", "application/json");
+        Bukkit.getScheduler().runTaskAsynchronously(plugin, () -> {
 
-            String json = """
-            {
-              "UserLogin": "%s",
-              "Password": "%s"
+            try {
+
+                FileConfiguration cfg = plugin.getConfig();
+
+                String baseUrl = cfg.getString("otobo.base-url");
+                String user = cfg.getString("otobo.agent-user");
+                String password = cfg.getString("otobo.agent-password");
+
+                String json = """
+                {
+                  "UserLogin": "%s",
+                  "Password": "%s"
+                }
+                """.formatted(user, password);
+
+                HttpRequest request = HttpRequest.newBuilder()
+                        .uri(URI.create(baseUrl + "/SessionCreate"))
+                        .timeout(Duration.ofSeconds(5))
+                        .header("Content-Type", "application/json")
+                        .POST(HttpRequest.BodyPublishers.ofString(json, StandardCharsets.UTF_8))
+                        .build();
+
+                HttpResponse<String> response =
+                        client.send(request, HttpResponse.BodyHandlers.ofString());
+
+                if (response.statusCode() == 200) {
+                    String body = response.body();
+                    this.sessionID = body.split("\"")[3];
+                    plugin.getLogger().info("Otobo Session erfolgreich erstellt.");
+                } else {
+                    plugin.getLogger().warning("Session Erstellung fehlgeschlagen.");
+                }
+
+            } catch (Exception e) {
+                plugin.getLogger().warning("Fehler bei Session Erstellung:");
+                e.printStackTrace();
             }
-            """.formatted(
-                    cfg.getString("otobo.agent-user"),
-                    cfg.getString("otobo.agent-password")
-            );
 
-            conn.getOutputStream().write(json.getBytes(StandardCharsets.UTF_8));
-
-            BufferedReader br = new BufferedReader(
-                    new InputStreamReader(conn.getInputStream(), StandardCharsets.UTF_8));
-
-            String response = br.readLine();
-            sessionID = response.split("\"")[3];
-
-            plugin.getLogger().info("OTOBO Session erstellt.");
-        } catch (Exception e) {
-            plugin.getLogger().warning("Session fehlgeschlagen!");
-            e.printStackTrace();
-        }
+        });
     }
 
-    public String createTicket(Player player, String message) {
-        try {
-            FileConfiguration cfg = plugin.getConfig();
-            URL url = URI.create(cfg.getString("otobo.base-url") + "/TicketCreate").toURL();
+    public void createTicket(Player player, String message) {
 
-            UUID uuid = player.getUniqueId();
-            String customerUser = uuid.toString();
+        Bukkit.getScheduler().runTaskAsynchronously(plugin, () -> {
 
-            String json = """
-            {
-              "SessionID": "%s",
-              "Ticket": {
-                "Title": "Support von %s",
-                "Queue": "%s",
-                "State": "new",
-                "Priority": "3 normal",
-                "CustomerUser": "%s"
-              },
-              "Article": {
-                "Subject": "Minecraft Support",
-                "Body": "%s",
-                "ContentType": "text/plain; charset=utf-8"
-              }
+            try {
+
+                if (sessionID == null) {
+                    Bukkit.getScheduler().runTask(plugin,
+                            () -> player.sendMessage("§cSupport System nicht bereit."));
+                    return;
+                }
+
+                FileConfiguration cfg = plugin.getConfig();
+
+                String baseUrl = cfg.getString("otobo.base-url");
+                String queue = cfg.getString("queue");
+
+                String json = """
+                {
+                  "SessionID": "%s",
+                  "Ticket": {
+                    "Title": "Support von %s",
+                    "Queue": "%s",
+                    "State": "new",
+                    "Priority": "3 normal",
+                    "CustomerUser": "%s"
+                  },
+                  "Article": {
+                    "Subject": "Minecraft Support",
+                    "Body": "%s",
+                    "ContentType": "text/plain; charset=utf8"
+                  }
+                }
+                """.formatted(
+                        sessionID,
+                        player.getName(),
+                        queue,
+                        player.getUniqueId().toString(),
+                        message.replace("\"", "")
+                );
+
+                HttpRequest request = HttpRequest.newBuilder()
+                        .uri(URI.create(baseUrl + "/TicketCreate"))
+                        .timeout(Duration.ofSeconds(5))
+                        .header("Content-Type", "application/json")
+                        .POST(HttpRequest.BodyPublishers.ofString(json, StandardCharsets.UTF_8))
+                        .build();
+
+                HttpResponse<String> response =
+                        client.send(request, HttpResponse.BodyHandlers.ofString());
+
+                if (response.statusCode() == 200 &&
+                        response.body().contains("TicketNumber")) {
+
+                    String body = response.body();
+                    String ticketNumber = body.split("\"")[3];
+
+                    Bukkit.getScheduler().runTask(plugin, () -> {
+
+                        player.sendMessage("§aTicket erfolgreich erstellt! §7(#" + ticketNumber + ")");
+
+                        for (Player p : Bukkit.getOnlinePlayers()) {
+                            if (p.hasPermission("otobo.admin")) {
+                                p.sendMessage("§c" + player.getName()
+                                        + " §7hat ein Ticket erstellt §8(#"
+                                        + ticketNumber + ")");
+                            }
+                        }
+
+                    });
+
+                } else {
+
+                    Bukkit.getScheduler().runTask(plugin,
+                            () -> player.sendMessage("§cTicket konnte nicht erstellt werden."));
+
+                    plugin.getLogger().warning("Otobo Antwort: " + response.body());
+                }
+
+            } catch (Exception e) {
+
+                plugin.getLogger().warning("Ticket Fehler:");
+                e.printStackTrace();
+
+                Bukkit.getScheduler().runTask(plugin,
+                        () -> player.sendMessage("§cFehler beim Support-System."));
             }
-            """.formatted(
-                    sessionID,
-                    player.getName(),
-                    cfg.getString("queue"),
-                    customerUser,
-                    message.replace("\"", "'")
-            );
 
-            HttpURLConnection conn = (HttpURLConnection) url.openConnection();
-            conn.setRequestMethod("POST");
-            conn.setDoOutput(true);
-            conn.setRequestProperty("Content-Type", "application/json");
-
-            conn.getOutputStream().write(json.getBytes(StandardCharsets.UTF_8));
-
-            BufferedReader br = new BufferedReader(
-                    new InputStreamReader(conn.getInputStream(), StandardCharsets.UTF_8));
-
-            String response = br.readLine();
-
-            if (response != null && response.contains("TicketNumber")) {
-                return response.split("\"")[3];
-            }
-
-        } catch (Exception e) {
-            plugin.getLogger().warning("Ticket Fehler.");
-            e.printStackTrace();
-        }
-        return null;
+        });
     }
 }
