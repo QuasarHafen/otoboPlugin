@@ -1,0 +1,8 @@
+otobo:
+  base-url: "http://192.168.178.50:8080/otobo/nph-genericinterface.pl/Webservice/MinecraftAPI"
+  agent-user: "Otobo"
+  agent-password: "AFGJM23"
+
+queue: "Raw"
+
+cooldown-seconds: 30

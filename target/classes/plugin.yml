@@ -1,0 +1,14 @@
+name: OtoboPlugin
+version: 1.1
+main: de.quasarhafen.otobo.OtoboPlugin
+api-version: 1.21
+
+commands:
+  support:
+    description: Erstellt ein Support Ticket
+    usage: /support <Nachricht>
+
+permissions:
+  otobo.admin:
+    description: Erhält Support Benachrichtigungen
+    default: op
