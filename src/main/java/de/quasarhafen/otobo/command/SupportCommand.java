@@ -1,7 +1,7 @@
 package de.quasarhafen.otobo.command;
 
 import de.quasarhafen.otobo.OtoboPlugin;
-import org.bukkit.ChatColor;
+import net.kyori.adventure.text.minimessage.MiniMessage;
 import org.bukkit.command.Command;
 import org.bukkit.command.CommandExecutor;
 import org.bukkit.command.CommandSender;
@@ -20,7 +20,7 @@ public class SupportCommand implements CommandExecutor, TabCompleter {
     }
 
     private String color(String s) {
-        return ChatColor.translateAlternateColorCodes('&', s);
+        return MiniMessage.miniMessage().serialize(MiniMessage.miniMessage().deserialize(s));
     }
 
     @Override
