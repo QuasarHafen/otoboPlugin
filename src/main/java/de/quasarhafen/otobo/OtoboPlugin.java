@@ -18,6 +18,7 @@ public class OtoboPlugin extends JavaPlugin {
         SupportCommand command = new SupportCommand(this);
         getCommand("support").setExecutor(command);
         getCommand("support").setTabCompleter(command);
+        getServer().getPluginManager().registerEvents(command, this);
 
         getLogger().info("OtoboPlugin aktiviert.");
     }
