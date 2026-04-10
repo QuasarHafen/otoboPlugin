@@ -6,3 +6,9 @@ otobo:
 queue: "Raw"
 
 cooldown-seconds: 30
+
+messages:
+  prefix: "&6[Support] "
+  success: "&aDein Ticket wurde erstellt. &7(#%ticket%)"
+  cooldown: "&cBitte warte noch %time% Sekunden."
+  notify: "&eNeues Ticket von &f%player% &8(#%ticket%)"

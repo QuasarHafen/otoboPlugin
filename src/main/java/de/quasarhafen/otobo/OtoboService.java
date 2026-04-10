@@ -1,5 +1,7 @@
 package de.quasarhafen.otobo;
 
+import net.kyori.adventure.text.Component;
+import net.kyori.adventure.text.serializer.legacy.LegacyComponentSerializer;
 import org.bukkit.Bukkit;
 import org.bukkit.configuration.file.FileConfiguration;
 import org.bukkit.entity.Player;
@@ -25,6 +27,10 @@ public class OtoboService {
                 .build();
 
         createSession();
+    }
+
+    private Component colorize(String s) {
+        return LegacyComponentSerializer.legacyAmpersand().deserialize(s);
     }
 
     public void createSession() {
@@ -80,7 +86,7 @@ public class OtoboService {
 
                 if (sessionID == null) {
                     Bukkit.getScheduler().runTask(plugin,
-                            () -> player.sendMessage("§cSupport System nicht bereit."));
+                            () -> player.sendMessage(colorize("&cSupport System nicht bereit.")));
                     return;
                 }
 
@@ -129,15 +135,22 @@ public class OtoboService {
                     String body = response.body();
                     String ticketNumber = body.split("\"")[3];
 
+                    String successMsg = cfg.getString("messages.success",
+                                    "&aDein Ticket wurde erstellt. &7(#%ticket%)")
+                            .replace("%ticket%", ticketNumber);
+
+                    String notifyMsg = cfg.getString("messages.notify",
+                                    "&eNeues Ticket von &f%player% &8(#%ticket%)")
+                            .replace("%player%", player.getName())
+                            .replace("%ticket%", ticketNumber);
+
                     Bukkit.getScheduler().runTask(plugin, () -> {
 
-                        player.sendMessage("§aTicket erfolgreich erstellt! §7(#" + ticketNumber + ")");
+                        player.sendMessage(colorize(successMsg));
 
                         for (Player p : Bukkit.getOnlinePlayers()) {
                             if (p.hasPermission("otobo.admin")) {
-                                p.sendMessage("§c" + player.getName()
-                                        + " §7hat ein Ticket erstellt §8(#"
-                                        + ticketNumber + ")");
+                                p.sendMessage(colorize(notifyMsg));
                             }
                         }
 
@@ -146,7 +159,7 @@ public class OtoboService {
                 } else {
 
                     Bukkit.getScheduler().runTask(plugin,
-                            () -> player.sendMessage("§cTicket konnte nicht erstellt werden."));
+                            () -> player.sendMessage(colorize("&cTicket konnte nicht erstellt werden.")));
 
                     plugin.getLogger().warning("Otobo Antwort: " + response.body());
                 }
@@ -157,7 +170,7 @@ public class OtoboService {
                 e.printStackTrace();
 
                 Bukkit.getScheduler().runTask(plugin,
-                        () -> player.sendMessage("§cFehler beim Support-System."));
+                        () -> player.sendMessage(colorize("&cFehler beim Support-System.")));
             }
 
         });
