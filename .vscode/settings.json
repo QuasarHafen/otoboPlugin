@@ -1,4 +1,16 @@
 {
-    "java.compile.nullAnalysis.mode": "automatic",
-    "java.configuration.updateBuildConfiguration": "interactive"
+  "java.compile.nullAnalysis.mode": "automatic",
+  "java.configuration.updateBuildConfiguration": "interactive",
+  "java.jdt.ls.java.home": "C:\\Users\\reimerfi\\.jdk\\jdk-25",
+  "java.configuration.runtimes": [
+    {
+      "name": "JavaSE-25",
+      "path": "C:\\Users\\reimerfi\\.jdk\\jdk-25",
+      "default": true
+    },
+    {
+      "name": "JavaSE-21",
+      "path": "C:\\Users\\reimerfi\\.jdk\\jdk-21.0.8"
+    }
+  ]
 }
